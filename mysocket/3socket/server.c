@@ -10,6 +10,10 @@
 
 #define ERR_EXIT(m) do{ perror(m); exit(EXIT_FAILURE);} while(0)
 
+struct packet {
+	int len;
+	char buf[1024];
+};
 
 size_t readn(int fd, void *buf, size_t count){
 	int nleft = count;
@@ -17,7 +21,7 @@ size_t readn(int fd, void *buf, size_t count){
 	char* bufp = (char*)buf;
 
 	while(nleft > 0){
-		int n = read(fd, bufp + nread, nleft);	//nelft 还是 nleft+1 呢？read 的返回值是否算上'\0'?
+		int n = read(fd, bufp + nread, nleft);	// nelft 还是 nleft+1 呢？read 的返回值是否算上'\0'?
 		if(n == -1){
 			if(errno == EINTR)
 				continue;
@@ -33,7 +37,7 @@ size_t readn(int fd, void *buf, size_t count){
 	return count;	//success
 }
 
-ssize_t write(int fd, const void *buf, size_t count){
+ssize_t writen(int fd, const void *buf, size_t count){
 	int nleft = count;
 	int nwritten = 0;
 	char* bufp = (char*)buf;
@@ -43,9 +47,9 @@ ssize_t write(int fd, const void *buf, size_t count){
 		if(n == -1){
 			if(errno == EINTR)
 				continue;
-			return -1;	//read fail
+			return -1;	// write fail
 		}
-		else if(n == 0)	//EOF
+		else if(n == 0)	// EOF
 			continue;
 		else {
 			nleft -= n;
@@ -56,21 +60,23 @@ ssize_t write(int fd, const void *buf, size_t count){
 }
 
 void do_service(int connfd){
-	char buf[1024];
-	memset(buf, 0, sizeof(buf));
+	struct packet pReadBuf;
+	memset(&pReadBuf, 0, sizeof(pReadBuf));
 	while(1){
-		int len = read(connfd, buf, sizeof(buf));
-		//int len = readn(connfd, buf, 2);
+		int len = readn(connfd, &pReadBuf.len, sizeof(int));
 		if(len == -1){
 			ERR_EXIT("read");
 		}
-		else if(len == 0){ //client 退出
+		else if(len < sizeof(int)){ //client 退出
 			printf("client close\n");
 			break;
 		}
-		fputs(buf,stdout);
-		write(connfd, buf, len);
-		memset(buf, 0, len+1);
+		readn(connfd, pReadBuf.buf, ntohl(pReadBuf.len));
+		fputs(pReadBuf.buf,stdout);
+		
+		writen(connfd, &pReadBuf.len, sizeof(int));
+		writen(connfd, pReadBuf.buf, ntohl(pReadBuf.len));
+		memset(&pReadBuf, 0, sizeof(pReadBuf));
 	}	
 }
 
