@@ -130,7 +130,7 @@ int main() {
 	int iConnFd;
 	struct sockaddr_in stPeer;
 	socklen_t iPeerLength = sizeof(stPeer);
-	while(1) {
+	/*while(1) {
 		if((iConnFd = accept(iSockFd, (struct sockaddr*)&stPeer, &iPeerLength)) < 0)
 			ERR_EXIT("accept");
 		printf("peer connect: ip = %s, port = %d\n",
@@ -149,7 +149,9 @@ int main() {
 		} else {
 			close(iConnFd);	    // parent 进程不需要这个连接，所以关闭
 		}
-	}
+	}*/
+
+	
 	close(iSockFd);
 	return 0;
 }
